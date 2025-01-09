@@ -85,11 +85,26 @@ class CasadiLike(ArrayLike):
 
     def __setitem__(self, idx, value: Union["CasadiLike", npt.ArrayLike]):
         """Overrides set item operator"""
-        self.array[idx] = value.array if type(self) is type(value) else value
+        if idx is Ellipsis:
+            self.array = value.array if isinstance(value, CasadiLike) else value
+        elif isinstance(idx, tuple) and Ellipsis in idx:
+            idx = tuple(slice(None) if i is Ellipsis else i for i in idx)
+            self.array[idx] = value.array if isinstance(value, CasadiLike) else value
+        else:
+            self.array[idx] = value.array if isinstance(value, CasadiLike) else value
 
     def __getitem__(self, idx) -> "CasadiLike":
         """Overrides get item operator"""
-        return CasadiLike(self.array[idx])
+        if idx is Ellipsis:
+            # Handle the case where only Ellipsis is passed
+            return CasadiLike(self.array)
+        elif isinstance(idx, tuple) and Ellipsis in idx:
+            # Handle the case where Ellipsis is part of a tuple
+            idx = tuple(slice(None) if k is Ellipsis else k for k in idx)
+            return CasadiLike(self.array[idx])
+        else:
+            # For other cases, delegate to the CasADi object's __getitem__
+            return CasadiLike(self.array[idx])
 
     @property
     def T(self) -> "CasadiLike":
@@ -128,6 +143,68 @@ class CasadiLikeFactory(ArrayLikeFactory):
             CasadiLike: Vector wrapping *x
         """
         return CasadiLike(cs.SX(*x))
+
+    @staticmethod
+    def zeros_like(x) -> CasadiLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: zero matrix of dimension x
+        """
+
+        kind = (
+            cs.DM
+            if (isinstance(x, CasadiLike) and isinstance(x.array, cs.DM))
+            or isinstance(x, cs.DM)
+            else cs.SX
+        )
+
+        return (
+            CasadiLike(kind.zeros(x.array.shape))
+            if isinstance(x, CasadiLike)
+            else (
+                CasadiLike(kind.zeros(x.shape))
+                if isinstance(x, (cs.SX, cs.DM))
+                else (
+                    TypeError(f"Unsupported type for zeros_like: {type(x)}")
+                    if isinstance(x, CasadiLike)
+                    else CasadiLike(kind.zeros(x.shape))
+                )
+            )
+        )
+
+    @staticmethod
+    def ones_like(x) -> CasadiLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: Identity matrix of dimension x
+        """
+
+        kind = (
+            cs.DM
+            if (isinstance(x, CasadiLike) and isinstance(x.array, cs.DM))
+            or isinstance(x, cs.DM)
+            else cs.SX
+        )
+
+        return (
+            CasadiLike(kind.ones(x.array.shape))
+            if isinstance(x, CasadiLike)
+            else (
+                CasadiLike(kind.ones(x.shape))
+                if isinstance(x, (cs.SX, cs.DM))
+                else (
+                    TypeError(f"Unsupported type for ones_like: {type(x)}")
+                    if isinstance(x, CasadiLike)
+                    else CasadiLike(kind.ones(x.shape))
+                )
+            )
+        )
 
 
 class SpatialMath(SpatialMath):
