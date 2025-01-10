@@ -2,7 +2,7 @@
 
 
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -32,7 +32,7 @@ class NumpyLike(ArrayLike):
         return self.array.shape
 
     def reshape(self, *args):
-        return self.array.reshape(*args)
+        return NumpyLike(self.array.reshape(*args))
 
     @property
     def T(self) -> "NumpyLike":
@@ -134,6 +134,36 @@ class NumpyLikeFactory(ArrayLikeFactory):
         """
         return NumpyLike(np.array(x))
 
+    @staticmethod
+    def zeros_like(x) -> NumpyLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: zero matrix of dimension x
+        """
+        return (
+            NumpyLike(np.zeros_like(x.array))
+            if isinstance(x, NumpyLike)
+            else NumpyLike(np.zeros_like(x))
+        )
+
+    @staticmethod
+    def ones_like(x) -> NumpyLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: Ones matrix of dimension x
+        """
+        return (
+            NumpyLike(np.ones_like(x.array))
+            if isinstance(x, NumpyLike)
+            else NumpyLike(np.ones_like(x))
+        )
+
 
 class SpatialMath(SpatialMath):
     def __init__(self):
@@ -148,7 +178,11 @@ class SpatialMath(SpatialMath):
         Returns:
             NumpyLike: sin value of x
         """
-        return NumpyLike(np.sin(x))
+        return (
+            NumpyLike(np.sin(x.array))
+            if isinstance(x, NumpyLike)
+            else NumpyLike(np.sin(x))
+        )
 
     @staticmethod
     def cos(x: npt.ArrayLike) -> "NumpyLike":
@@ -159,7 +193,11 @@ class SpatialMath(SpatialMath):
         Returns:
             NumpyLike: cos value of x
         """
-        return NumpyLike(np.cos(x))
+        return (
+            NumpyLike(np.cos(x.array))
+            if isinstance(x, NumpyLike)
+            else NumpyLike(np.cos(x))
+        )
 
     @staticmethod
     def outer(x: npt.ArrayLike, y: npt.ArrayLike) -> "NumpyLike":
@@ -208,7 +246,23 @@ class SpatialMath(SpatialMath):
         Returns:
             NumpyLike:  the skew symmetric matrix from x
         """
-        if not isinstance(x, NumpyLike):
-            return -np.cross(np.array(x), np.eye(3), axisa=0, axisb=0)
-        x = x.array
+        if isinstance(x, NumpyLike):
+            x = x.array
+
         return NumpyLike(-np.cross(np.array(x), np.eye(3), axisa=0, axisb=0))
+
+    @staticmethod
+    def stack(x: Tuple[Union[NumpyLike, npt.ArrayLike]], axis: int = 0) -> NumpyLike:
+        """
+        Args:
+            x (Tuple[Union[NumpyLike, npt.ArrayLike]]): elements to stack
+            axis (int): axis to stack
+
+        Returns:
+            NumpyLike: stacked elements
+        """
+        if isinstance(x[0], NumpyLike):
+            v = np.stack([x[i].array for i in range(len(x))], axis=axis)
+        else:
+            v = np.stack(x, axis=axis)
+        return NumpyLike(v)

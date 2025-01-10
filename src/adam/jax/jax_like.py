@@ -2,7 +2,7 @@
 
 
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Tuple
 
 import jax.numpy as jnp
 import numpy.typing as npt
@@ -35,7 +35,7 @@ class JaxLike(ArrayLike):
         return self.array.shape
 
     def reshape(self, *args):
-        return self.array.reshape(*args)
+        return JaxLike(self.array.reshape(*args, order="C"))
 
     @property
     def T(self) -> "JaxLike":
@@ -132,6 +132,36 @@ class JaxLikeFactory(ArrayLikeFactory):
         """
         return JaxLike(jnp.array(x))
 
+    @staticmethod
+    def zeros_like(x) -> JaxLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: zero matrix of dimension x
+        """
+        return (
+            JaxLike(jnp.zeros_like(x.array))
+            if isinstance(x, JaxLike)
+            else JaxLike(jnp.zeros_like(x))
+        )
+
+    @staticmethod
+    def ones_like(x) -> JaxLike:
+        """
+        Args:
+            x (npt.ArrayLike): matrix
+
+        Returns:
+            npt.ArrayLike: Ones matrix of dimension x
+        """
+        return (
+            JaxLike(jnp.ones_like(x.array))
+            if isinstance(x, JaxLike)
+            else JaxLike(jnp.ones_like(x))
+        )
+
 
 class SpatialMath(SpatialMath):
     def __init__(self):
@@ -146,7 +176,9 @@ class SpatialMath(SpatialMath):
         Returns:
             JaxLike: sin of x
         """
-        return JaxLike(jnp.sin(x))
+        return (
+            JaxLike(jnp.sin(x.array)) if isinstance(x, JaxLike) else JaxLike(jnp.sin(x))
+        )
 
     @staticmethod
     def cos(x: npt.ArrayLike) -> "JaxLike":
@@ -157,7 +189,9 @@ class SpatialMath(SpatialMath):
         Returns:
             JaxLike: cos of x
         """
-        return JaxLike(jnp.cos(x))
+        return (
+            JaxLike(jnp.cos(x.array)) if isinstance(x, JaxLike) else JaxLike(jnp.cos(x))
+        )
 
     @staticmethod
     def outer(x: npt.ArrayLike, y: npt.ArrayLike) -> "JaxLike":
@@ -209,4 +243,16 @@ class SpatialMath(SpatialMath):
             v = jnp.hstack([x[i].array for i in range(len(x))])
         else:
             v = jnp.hstack([x[i] for i in range(len(x))])
+        return JaxLike(v)
+
+    @staticmethod
+    def stack(x: Tuple[Union[JaxLike, npt.ArrayLike]], axis: int = 0) -> JaxLike:
+        """
+        Returns:
+            JaxLike: Stack of x
+        """
+        if isinstance(x[0], JaxLike):
+            v = jnp.stack([x[i].array for i in range(len(x))], axis=axis)
+        else:
+            v = jnp.stack(x, axis=axis)
         return JaxLike(v)

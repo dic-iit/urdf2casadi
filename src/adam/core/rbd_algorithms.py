@@ -57,7 +57,7 @@ class RBDAlgorithms:
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.math.spatial_transform(
-                    self.math.factory.eye(3), self.math.factory.zeros(3, 1)
+                    self.math.factory.eye(3), self.math.factory.zeros(3)
                 )
                 Phi[i] = self.math.factory.eye(6)
             else:
@@ -334,12 +334,13 @@ class RBDAlgorithms:
         Returns:
             com (T): The CoM position
         """
-        com_pos = self.math.factory.zeros(3, 1)
+        com_pos = self.math.factory.zeros(3)
         for item in self.model.tree:
             link = item.link
             I_H_l = self.forward_kinematics(link.name, base_transform, joint_positions)
             H_link = link.homogeneous()
             # Adding the link transform
+
             I_H_l = I_H_l @ H_link
             com_pos += I_H_l[:3, 3] * link.inertial.mass
         com_pos /= self.get_total_mass()
@@ -408,6 +409,7 @@ class RBDAlgorithms:
         Returns:
             tau (T): generalized force variables
         """
+
         # TODO: add accelerations
         tau = self.math.factory.zeros(self.NDoF + 6, 1)
         model_len = self.model.N
@@ -453,7 +455,7 @@ class RBDAlgorithms:
             if link_i.name == self.root_link:
                 # The first "real" link. The joint is universal.
                 X_p[i] = self.math.spatial_transform(
-                    self.math.factory.eye(3), self.math.factory.zeros(3, 1)
+                    self.math.factory.eye(3), self.math.factory.zeros(3)
                 )
                 Phi[i] = self.math.factory.eye(6)
                 v[i] = B_X_BI @ base_velocity
